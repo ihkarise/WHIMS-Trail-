@@ -574,5 +574,114 @@ nav button:focus-visible{outline:2px solid #fff}
 <script src="whims-v41.js"></script>
 <script src="whims-orders.js"></script>
 <script src="whims-source.js"></script>
+
+<script>
+/**
+ * Intake Name Fix Patch
+ * Resolves medicine name: item.name → item.medicine → item.matchedName → "Unknown Medicine"
+ */
+(function() {
+  'use strict';
+
+  var intakeData = [];
+
+  function resolveName(item) {
+    if (!item) return 'Unknown Medicine';
+    return item.name || item.medicine || item.matchedName || 'Unknown Medicine';
+  }
+
+  function fixRenderedNames() {
+    var container = document.getElementById('intakeList');
+    if (!container) return;
+
+    var cards = container.querySelectorAll('.intake-item, .med, [data-idx], [data-id]');
+    cards.forEach(function(card, idx) {
+      var explicitIdx = card.dataset.idx || card.dataset.index;
+      var itemIdx = explicitIdx !== undefined ? parseInt(explicitIdx, 10) : idx;
+
+      var item = intakeData[itemIdx];
+      if (!item) return;
+
+      var name = resolveName(item);
+
+      var nameEls = card.querySelectorAll('.intake-name, .name');
+      nameEls.forEach(function(el) {
+        if (el.textContent.trim() === 'Medicine' || el.textContent.trim() === '') {
+          el.textContent = name;
+        }
+      });
+    });
+  }
+
+  var observer = new MutationObserver(function() {
+    fixRenderedNames();
+  });
+
+  function startObserving() {
+    var target = document.getElementById('intakeList');
+    if (target) {
+      observer.observe(target, { childList: true, subtree: true });
+    }
+  }
+
+  function watchProp(propName) {
+    try {
+      var val = window[propName];
+      Object.defineProperty(window, propName, {
+        configurable: true,
+        enumerable: true,
+        get: function() { return val; },
+        set: function(v) {
+          val = v;
+          intakeData = Array.isArray(v) ? v : [];
+          requestAnimationFrame(fixRenderedNames);
+        }
+      });
+    } catch (e) {}
+  }
+
+  ['intakeData', 'pendingIntake', 'intakeQueue', 'intakeItems', '_intakeItems'].forEach(watchProp);
+
+  function patchFn(fnName) {
+    var orig = window[fnName];
+    if (typeof orig !== 'function') return;
+
+    window[fnName] = function(idx) {
+      var item = intakeData[idx];
+      var name = resolveName(item);
+      var isAccept = /accept|approve/i.test(fnName);
+      var action = isAccept ? 'Accept' : 'Reject';
+
+      if (confirm(action + ' stock?\n\n' + name)) {
+        return orig.apply(this, arguments);
+      }
+      return false;
+    };
+  }
+
+  ['acceptIntake', 'rejectIntake', 'doAcceptIntake', 'doRejectIntake',
+   'confirmAccept', 'confirmReject', 'approveIntake', 'declineIntake'].forEach(patchFn);
+
+  function init() {
+    startObserving();
+    fixRenderedNames();
+
+    var count = 0;
+    var timer = setInterval(function() {
+      ['acceptIntake', 'rejectIntake', 'doAcceptIntake', 'doRejectIntake',
+       'confirmAccept', 'confirmReject', 'approveIntake', 'declineIntake'].forEach(patchFn);
+      fixRenderedNames();
+      if (++count > 60) clearInterval(timer);
+    }, 500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
 </body>
 </html>
