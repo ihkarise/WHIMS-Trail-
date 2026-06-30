@@ -17,7 +17,15 @@
   const toast=(m,e)=>{ const t=G('toast'); if(t)t(m,e); else console.log(m); };
   async function call(body){ const ap=G('apiPost'); if(!ap)throw new Error('WHIMS API not ready');
     const r=await ap(body); return (r&&typeof r==='object'&&'ok'in r&&'data'in r)?r.data:r; }
-  const inv=()=>Array.isArray(G('INV'))?G('INV'):[];
+  /** Inventory accessor for this module's own use (the add-to-cart search).
+   *  `let INV` in app.js is a top-level lexical binding, not a `window`
+   *  property — so the old `G('INV')` check was always [] in production,
+   *  silently breaking renderSearch() while everything else (forecastMap,
+   *  which calls Core.Intelligence directly) kept working, because Core's
+   *  own data.inventory() already does the correct window→localStorage
+   *  fallback. Delegate to that same accessor instead of duplicating it. */
+  const inv=()=>{ const c=Core(); if(c) return c.data.inventory();
+    return Array.isArray(G('INV'))?G('INV'):[]; };  // graceful fallback only if Core failed to load
   function timeAgo(s){ const t=Date.parse((s||'').replace(' ','T')); if(isNaN(t))return''; const d=Math.floor((Date.now()-t)/1000);
     if(d<60)return'just now'; if(d<3600)return Math.floor(d/60)+'m ago'; if(d<86400)return Math.floor(d/3600)+'h ago'; return Math.floor(d/86400)+'d ago'; }
   function waMap(){ try{return JSON.parse(localStorage.getItem(LS_WA)||'{}');}catch(e){return{};} }
