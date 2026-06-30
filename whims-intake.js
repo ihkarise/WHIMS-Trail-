@@ -18,6 +18,7 @@
   const D = document;
   const G = n => window[n];
   const Core = () => (window.WHIMS && window.WHIMS.Core) || null;
+  const WF = () => (window.WHIMS && window.WHIMS.Workflow) || null;
   const esc = s => G('esc') ? G('esc')(s) : String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const toast = (m,e)=>{ const t=G('toast'); if(t)t(m,e); else console.log(m); };
   async function apiPost(body){ const ap=G('apiPost'); if(!ap) throw new Error('WHIMS API not ready');
@@ -227,6 +228,7 @@
       await apiPost(body);
       _undoList = _undoList.filter(e => e.undoId !== undoId);
       toast('Undone ✓ — back in the review queue');
+      const wf = WF(); if (wf) wf.dispatch('INVENTORY_UPDATED', { intakeId, undone:true });
       if (G('loadAll')) await G('loadAll')(false); else enhance();
     }catch(e){ toast(e.message, true); if (btn) btn.disabled=false; }
   }
@@ -372,6 +374,7 @@
       const r = await apiPost({ action:'approveintake', items:[item] });
       const res = (r && r.results && r.results[0]) || {};
       toast('Intake accepted ✓' + (res.resultId?' · '+res.resultId:''));
+      const wf = WF(); if (wf) wf.dispatch('INTAKE_APPROVED', { intakeId:card.dataset.id, resultId:res.resultId, action:res.action });
       if (res.undoId && res.undoExpiresAt){          // Phase 5 — older backends simply omit these, no banner shown
         _undoList.push({ undoId:res.undoId, intakeId:card.dataset.id, resultId:res.resultId,
           action:res.action||card.dataset.action, createdAt:new Date().toISOString(), expiresAt:res.undoExpiresAt });
@@ -388,6 +391,7 @@
     try{
       await apiPost({ action:'rejectintake', intakeId:card.dataset.id });
       toast('Intake rejected');
+      const wf = WF(); if (wf) wf.emit('INTAKE_REJECTED', { intakeId:card.dataset.id });
       _origByCard.delete(card.dataset.id);
       if (G('loadAll')) await G('loadAll')(false); else enhance();
     }catch(e){ toast(e.message, true); btn.disabled=false; }
