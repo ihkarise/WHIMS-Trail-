@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="whims-intake.css">
 <link rel="stylesheet" href="whims-ai.css">
 
+  
 <style>
 :root{
   --navy:#2A3C78; --navy-2:#1E2D5E; --navy-soft:#E9EDF7;
@@ -574,14 +575,24 @@ nav button:focus-visible{outline:2px solid #fff}
 <div id="toast" role="status"></div>
  
 <script src="app.js"></script>
+
+<!-- Core -->
 <script src="whims-core.js"></script>
 <script src="whims-v41.js"></script>
-<script src="whims-orders.js"></script>
+
+<!-- Dashboard / Source -->
 <script src="whims-source.js"></script>
 <script src="whims-dashboard.js"></script>
+<script src="source-analytics-fix.js"></script>
+
+<!-- Workflow Engine (must load before modules that use it) -->
+<script src="whims-workflow.js"></script>
+
+<!-- Feature Modules -->
+<script src="whims-orders.js"></script>
 <script src="whims-intake.js"></script>
 <script src="whims-ai.js"></script>
-<script src="source-analytics-fix.js"></script>
+  
 
 <script>
 /**
